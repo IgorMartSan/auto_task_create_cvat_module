@@ -1,0 +1,25 @@
+## Não use
+  
+  auto_task_create_cvat_module:
+      container_name: auto_task_create_cvat_module
+      restart: always
+      build:
+        context: ./auto_task_create_cvat_module
+        dockerfile: dockerfile
+      volumes:  
+        - ${PATH_LOG}:/system_log
+      environment:
+        CONTAINER_NAME: auto_task_create_cvat_module
+
+        TZ: America/Sao_Paulo
+
+      networks:
+        - network_argus_2
+      
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: 1
+                capabilities: [gpu]

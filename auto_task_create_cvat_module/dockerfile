@@ -1,0 +1,74 @@
+
+# Use an Ubuntu base image that's compatible with CUDA and pyenv requirements
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+
+# Avoid interactive dialog (e.g., timezone data) and set default locale
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+ENV HOME /root
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH
+
+# Install dependencies for pyenv and Python build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    build-essential \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    wget \
+    curl \
+    llvm \
+    libncurses5-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libffi-dev \
+    liblzma-dev \
+    git \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pyenv and Python 3.12 using pyenv
+RUN curl https://pyenv.run | bash \
+    && echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc \
+    && echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc \
+    && echo 'eval "$(pyenv init --path)"' >> ~/.bashrc \
+    && echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc \
+    && . ~/.bashrc \
+    && pyenv install 3.12.2 \
+    && pyenv global 3.12.2
+
+# Verify Python version
+RUN python --version
+
+# Atualizar pip
+RUN pip install --upgrade pip
+
+RUN pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu121
+
+RUN pip install ultralytics==8.2.55
+
+# Definir o diretório de trabalho
+WORKDIR /code
+
+# Copiar o código fonte para o container
+COPY . /code
+
+RUN pip install poetry
+
+RUN pip install websocket-client
+
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+RUN pip install -r requirements.txt
+
+# Definir o diretório de trabalho para o serviço de inferência
+WORKDIR /code/app
+
+# Comando para executar o serviço de inferência
+CMD ["python", "main.py"]
+#CMD ["python", "test_model.py"
